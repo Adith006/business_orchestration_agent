@@ -4,7 +4,7 @@
 
 **One CEO. Unlimited Possibilities. An Entire AI Workforce.**
 
-NEXORA is an AI-powered business orchestration platform where users define business goals and a central AI CEO plans, coordinates, and delegates work to specialized AI employees.
+Business Orchestrator Agent is an AI-powered business orchestration platform where users define business goals and a central AI CEO plans, coordinates, and delegates work to specialized AI employees.
 
 ## Core Capabilities
 

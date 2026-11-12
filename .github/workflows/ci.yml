@@ -14,6 +14,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql+asyncpg://business_admin:ci_password@localhost:5432/business_orchestrator
+      JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
 
     services:
       postgres:

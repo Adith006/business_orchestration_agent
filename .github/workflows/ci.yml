@@ -1,0 +1,52 @@
+
+name: Backend CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  backend-checks:
+    name: Backend Quality Checks
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://business_admin:ci_password@localhost:5432/business_orchestrator
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: business_admin
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: business_orchestrator
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U business_admin -d business_orchestrator"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install dependencies
+        run: uv sync --all-packages --all-groups
+
+      - name: Run Ruff
+        run: uv run ruff check apps/api/src apps/api/tests
+
+      - name: Run tests
+        run: uv run pytest apps/api/tests -v

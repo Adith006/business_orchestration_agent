@@ -1,5 +1,5 @@
 
-# NEXORA
+# Business Orchestrator Agent
 ### Autonomous AI Workforce & Business Orchestration Platform
 
 **One CEO. Unlimited Possibilities. An Entire AI Workforce.**

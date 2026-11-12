@@ -12,6 +12,24 @@ jobs:
     name: Backend Quality Checks
     runs-on: ubuntu-latest
 
+    env:
+      DATABASE_URL: postgresql+asyncpg://business_admin:ci_password@localhost:5432/business_orchestrator
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: business_admin
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: business_orchestrator
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U business_admin -d business_orchestrator"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

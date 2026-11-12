@@ -1,0 +1,11 @@
+
+[project]
+name = "business-orchestration-agent"
+version = "0.1.0"
+description = "NEXORA - Autonomous AI Workforce and Business Orchestration Platform"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = []
+
+[tool.uv]
+package = false

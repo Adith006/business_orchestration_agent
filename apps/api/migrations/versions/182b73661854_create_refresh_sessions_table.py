@@ -5,17 +5,16 @@ Revises: 87b88cca1697
 Create Date: 2026-11-12 17:12:44.213322
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '182b73661854'
-down_revision: Union[str, Sequence[str], None] = '87b88cca1697'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = '87b88cca1697'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -28,14 +27,34 @@ def upgrade() -> None:
     sa.Column('token_hash', sa.String(length=64), nullable=False),
     sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('revoked_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column(
+        'created_at',
+        sa.DateTime(timezone=True),
+        server_default=sa.text('now()'),
+        nullable=False,
+    ),
     sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_refresh_sessions_organization_id'), 'refresh_sessions', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_refresh_sessions_token_hash'), 'refresh_sessions', ['token_hash'], unique=True)
-    op.create_index(op.f('ix_refresh_sessions_user_id'), 'refresh_sessions', ['user_id'], unique=False)
+    op.create_index(
+        op.f('ix_refresh_sessions_organization_id'),
+        'refresh_sessions',
+        ['organization_id'],
+        unique=False,
+        )
+    op.create_index(
+        op.f('ix_refresh_sessions_token_hash'),
+        'refresh_sessions',
+        ['token_hash'],
+        unique=True,
+        )
+    op.create_index(
+        op.f('ix_refresh_sessions_user_id'),
+        'refresh_sessions',
+        ['user_id'],
+        unique=False,
+        )
     # ### end Alembic commands ###
 
 

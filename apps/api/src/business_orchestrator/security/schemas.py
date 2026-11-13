@@ -47,7 +47,7 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=128)
     organization_slug: OrganizationSlug
-    
+
 class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(min_length=50, max_length=256)
 
@@ -56,3 +56,9 @@ class RefreshResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     expires_in: int
+class AuthenticatedUser(BaseModel):
+    user_id: str
+    organization_id: str
+    email: EmailStr
+    full_name: str
+    organization_role: str

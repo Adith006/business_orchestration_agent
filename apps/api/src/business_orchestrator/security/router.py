@@ -3,7 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from business_orchestrator.core.config import get_settings
 from business_orchestrator.database.engine import get_db_session
+from business_orchestrator.security.dependencies import get_current_user
 from business_orchestrator.security.schemas import (
+    AuthenticatedUser,
     LoginRequest,
     OrganizationResponse,
     RefreshResponse,
@@ -109,3 +111,9 @@ async def refresh_tokens(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token.",
         ) from exc
+
+@router.get("/me", response_model=AuthenticatedUser)
+async def get_me(
+    current_user: AuthenticatedUser = Depends(get_current_user),
+) -> AuthenticatedUser:
+    return current_user

@@ -9,6 +9,8 @@ from business_orchestrator.organizations.schemas import (
     OrganizationResponse,
 )
 from business_orchestrator.organizations.service import OrganizationService
+from business_orchestrator.security.dependencies import get_current_user
+from business_orchestrator.security.schemas import AuthenticatedUser
 
 router = APIRouter(prefix="/organizations", tags=["Organizations"])
 
@@ -21,6 +23,7 @@ router = APIRouter(prefix="/organizations", tags=["Organizations"])
 async def create_organization(
     payload: OrganizationCreate,
     session: AsyncSession = Depends(get_db_session),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> OrganizationResponse:
     service = OrganizationService(session)
 
@@ -28,6 +31,7 @@ async def create_organization(
         organization = await service.create_organization(
             name=payload.name,
             slug=payload.slug,
+            user_id=UUID(current_user.user_id),
         )
     except ValueError as exc:
         raise HTTPException(
@@ -37,7 +41,6 @@ async def create_organization(
 
     return OrganizationResponse.model_validate(organization)
 
-
 @router.get(
     "/{organization_id}",
     response_model=OrganizationResponse,
@@ -45,7 +48,15 @@ async def create_organization(
 async def get_organization(
     organization_id: UUID,
     session: AsyncSession = Depends(get_db_session),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> OrganizationResponse:
+    # Restrict access to the authenticated user's active organization.
+    if str(organization_id) != current_user.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found.",
+        )
+
     service = OrganizationService(session)
     organization = await service.repository.get_by_id(organization_id)
 

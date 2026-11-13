@@ -9,6 +9,7 @@ from business_orchestrator.organizations.membership_repository import Membership
 from business_orchestrator.organizations.repository import OrganizationRepository
 from business_orchestrator.security.repository import UserRepository
 from business_orchestrator.security.schemas import AuthenticatedUser
+from business_orchestrator.security.tenant import TenantContext
 from business_orchestrator.security.tokens import decode_access_token
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -92,4 +93,13 @@ async def get_current_user(
         email=user.email,
         full_name=user.full_name,
         organization_role=membership.role,
+    )
+
+async def get_current_tenant(
+    current_user: AuthenticatedUser = Depends(get_current_user),
+) -> TenantContext:
+    return TenantContext(
+        user_id=UUID(current_user.user_id),
+        organization_id=UUID(current_user.organization_id),
+        organization_role=current_user.organization_role,
     )

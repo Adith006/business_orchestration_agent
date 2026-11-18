@@ -16,6 +16,7 @@ client = TestClient(app)
 async def mock_db_session():
     yield None
 
+
 async def mock_current_user() -> AuthenticatedUser:
     return AuthenticatedUser(
         user_id="00000000-0000-0000-0000-000000000001",
@@ -30,6 +31,7 @@ async def mock_current_user() -> AuthenticatedUser:
 
 
 # app.dependency_overrides[get_db_session] = mock_db_session
+
 
 @pytest.fixture(autouse=True)
 def override_dependencies():
@@ -86,26 +88,26 @@ def test_get_organization_allows_current_tenant() -> None:
     organization.created_at = now
     organization.updated_at = now
 
-    with patch(
-        "business_orchestrator.organizations.router.OrganizationService"
-    ) as service_class:
-        service_class.return_value.repository.get_by_id = AsyncMock(
+    with patch("business_orchestrator.organizations.router.OrganizationService") as service_class:
+        service_class.return_value.get_organization_for_tenant = AsyncMock(
             return_value=organization
         )
 
-        response = client.get(
-            f"/api/v1/organizations/{organization_id}"
-        )
+        response = client.get(f"/api/v1/organizations/{organization_id}")
 
     assert response.status_code == 200
+
+    service_class.return_value.get_organization_for_tenant.assert_awaited_once()
 
 
 def test_get_organization_rejects_another_tenant() -> None:
     other_organization_id = UUID("00000000-0000-0000-0000-000000000003")
 
-    response = client.get(
-        f"/api/v1/organizations/{other_organization_id}"
-    )
+    with patch("business_orchestrator.organizations.router.OrganizationService") as service_class:
+        service_class.return_value.get_organization_for_tenant = AsyncMock(return_value=None)
+
+        response = client.get(f"/api/v1/organizations/{other_organization_id}")
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Organization not found."
+    service_class.return_value.get_organization_for_tenant.assert_awaited_once()

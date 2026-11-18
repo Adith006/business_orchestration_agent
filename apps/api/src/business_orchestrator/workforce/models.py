@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from business_orchestrator.database.base import Base
+from business_orchestrator.workforce.constants import AIEmployeeStatus
 
 
 class AIEmployee(Base):
@@ -35,9 +36,10 @@ class AIEmployee(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
         String(30),
-        default="draft",
+        default=AIEmployeeStatus.DRAFT.value,
         nullable=False,
     )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

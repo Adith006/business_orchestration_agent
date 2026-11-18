@@ -9,6 +9,7 @@ from business_orchestrator.security.tenant import TenantContext
 from business_orchestrator.workforce.schemas import (
     AIEmployeeCreate,
     AIEmployeeResponse,
+    AIEmployeeStatusUpdate,
 )
 from business_orchestrator.workforce.service import AIEmployeeService
 
@@ -46,10 +47,7 @@ async def list_ai_employees(
 ) -> list[AIEmployeeResponse]:
     service = AIEmployeeService(session)
     employees = await service.list_employees(tenant_context)
-    return [
-        AIEmployeeResponse.model_validate(employee)
-        for employee in employees
-    ]
+    return [AIEmployeeResponse.model_validate(employee) for employee in employees]
 
 
 @router.get(
@@ -69,5 +67,37 @@ async def get_ai_employee(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="AI employee not found.",
         )
+
+    return AIEmployeeResponse.model_validate(employee)
+
+
+@router.patch(
+    "/{employee_id}/status",
+    response_model=AIEmployeeResponse,
+)
+async def update_ai_employee_status(
+    employee_id: UUID,
+    payload: AIEmployeeStatusUpdate,
+    session: AsyncSession = Depends(get_db_session),
+    tenant_context: TenantContext = Depends(get_current_tenant),
+) -> AIEmployeeResponse:
+    service = AIEmployeeService(session)
+
+    try:
+        employee = await service.update_employee_status(
+            employee_id=employee_id,
+            new_status=payload.status,
+            tenant_context=tenant_context,
+        )
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
 
     return AIEmployeeResponse.model_validate(employee)

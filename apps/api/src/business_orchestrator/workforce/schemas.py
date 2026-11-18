@@ -3,12 +3,18 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from business_orchestrator.workforce.constants import AIEmployeeStatus
+
 
 class AIEmployeeCreate(BaseModel):
     name: str = Field(min_length=2, max_length=150)
     role: str = Field(min_length=2, max_length=100)
     department: str = Field(min_length=2, max_length=100)
     description: str | None = None
+
+
+class AIEmployeeStatusUpdate(BaseModel):
+    status: AIEmployeeStatus
 
 
 class AIEmployeeResponse(BaseModel):

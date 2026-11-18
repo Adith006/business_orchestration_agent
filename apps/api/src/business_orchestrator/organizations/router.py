@@ -9,8 +9,12 @@ from business_orchestrator.organizations.schemas import (
     OrganizationResponse,
 )
 from business_orchestrator.organizations.service import OrganizationService
-from business_orchestrator.security.dependencies import get_current_user
+from business_orchestrator.security.dependencies import (
+    get_current_tenant,
+    get_current_user,
+)
 from business_orchestrator.security.schemas import AuthenticatedUser
+from business_orchestrator.security.tenant import TenantContext
 
 router = APIRouter(prefix="/organizations", tags=["Organizations"])
 
@@ -26,7 +30,6 @@ async def create_organization(
     current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> OrganizationResponse:
     service = OrganizationService(session)
-
     try:
         organization = await service.create_organization(
             name=payload.name,
@@ -41,6 +44,7 @@ async def create_organization(
 
     return OrganizationResponse.model_validate(organization)
 
+
 @router.get(
     "/{organization_id}",
     response_model=OrganizationResponse,
@@ -48,22 +52,16 @@ async def create_organization(
 async def get_organization(
     organization_id: UUID,
     session: AsyncSession = Depends(get_db_session),
-    current_user: AuthenticatedUser = Depends(get_current_user),
+    tenant_context: TenantContext = Depends(get_current_tenant),
 ) -> OrganizationResponse:
-    # Restrict access to the authenticated user's active organization.
-    if str(organization_id) != current_user.organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found.",
-        )
-
     service = OrganizationService(session)
-    organization = await service.repository.get_by_id(organization_id)
-
+    organization = await service.get_organization_for_tenant(
+        organization_id=organization_id,
+        tenant_context=tenant_context,
+    )
     if organization is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Organization not found.",
         )
-
     return OrganizationResponse.model_validate(organization)

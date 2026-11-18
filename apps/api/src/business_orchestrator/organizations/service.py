@@ -8,6 +8,7 @@ from business_orchestrator.organizations.membership_repository import (
 )
 from business_orchestrator.organizations.models import Organization
 from business_orchestrator.organizations.repository import OrganizationRepository
+from business_orchestrator.security.tenant import TenantContext
 
 
 class OrganizationService:
@@ -15,6 +16,15 @@ class OrganizationService:
         self.session = session
         self.repository = OrganizationRepository(session)
         self.memberships = MembershipRepository(session)
+
+    async def get_organization_for_tenant(
+        self,
+        organization_id: UUID,
+        tenant_context: TenantContext,
+    ) -> Organization | None:
+        if organization_id != tenant_context.organization_id:
+            return None
+        return await self.repository.get_by_id(tenant_context.organization_id)
 
     async def create_organization(
         self,
@@ -44,8 +54,6 @@ class OrganizationService:
 
         except IntegrityError:
             await self.session.rollback()
-            raise ValueError(
-                "An organization with this slug already exists."
-            ) from None
+            raise ValueError("An organization with this slug already exists.") from None
 
         return organization

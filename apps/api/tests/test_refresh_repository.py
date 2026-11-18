@@ -12,6 +12,7 @@ from business_orchestrator.security.refresh_repository import (
 @pytest.mark.asyncio
 async def test_create_refresh_session():
     session = AsyncMock()
+    session.add = MagicMock()
     repository = RefreshSessionRepository(session)
     expires_at = datetime.now(UTC)
 

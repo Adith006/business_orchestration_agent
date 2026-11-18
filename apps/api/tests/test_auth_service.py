@@ -9,6 +9,7 @@ from business_orchestrator.security.service import AuthService
 @pytest.mark.asyncio
 async def test_register_creates_user_organization_and_owner_membership():
     session = AsyncMock()
+    session.add = MagicMock()
     session.flush = AsyncMock()
     session.commit = AsyncMock()
     session.rollback = AsyncMock()

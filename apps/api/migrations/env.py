@@ -10,6 +10,7 @@ from business_orchestrator.organizations.membership import OrganizationMembershi
 from business_orchestrator.organizations.models import Organization  # noqa: F401
 from business_orchestrator.security.models import User  # noqa: F401
 from business_orchestrator.security.refresh_session import RefreshSession  # noqa: F401
+from business_orchestrator.workforce.models import AIEmployee  # noqa: F401
 
 # Import models here as they are created.
 # from business_orchestrator.organizations.models import Organization

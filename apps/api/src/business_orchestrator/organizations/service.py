@@ -1,3 +1,4 @@
+
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
@@ -7,6 +8,9 @@ from business_orchestrator.organizations.membership_repository import (
     MembershipRepository,
 )
 from business_orchestrator.organizations.models import Organization
+from business_orchestrator.organizations.rbac_service import (
+    OrganizationRBACService,
+)
 from business_orchestrator.organizations.repository import OrganizationRepository
 from business_orchestrator.security.tenant import TenantContext
 
@@ -16,6 +20,7 @@ class OrganizationService:
         self.session = session
         self.repository = OrganizationRepository(session)
         self.memberships = MembershipRepository(session)
+        self.rbac = OrganizationRBACService(session)
 
     async def get_organization_for_tenant(
         self,
@@ -43,10 +48,15 @@ class OrganizationService:
                 slug=slug,
             )
 
+            owner_role_id, _ = await self.rbac.provision_default_roles(
+                organization.id
+            )
+
             await self.memberships.create(
                 user_id=user_id,
                 organization_id=organization.id,
                 role="owner",
+                role_id=owner_role_id,
             )
 
             await self.session.commit()

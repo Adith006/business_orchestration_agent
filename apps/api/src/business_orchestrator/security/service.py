@@ -1,11 +1,17 @@
+
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from business_orchestrator.core.config import get_settings
-from business_orchestrator.organizations.membership_repository import MembershipRepository
+from business_orchestrator.organizations.membership_repository import (
+    MembershipRepository,
+)
 from business_orchestrator.organizations.models import Organization
+from business_orchestrator.organizations.rbac_service import (
+    OrganizationRBACService,
+)
 from business_orchestrator.organizations.repository import OrganizationRepository
 from business_orchestrator.security.password import hash_password, verify_password
 from business_orchestrator.security.refresh_repository import (
@@ -26,11 +32,14 @@ class AuthService:
         self.organizations = OrganizationRepository(session)
         self.memberships = MembershipRepository(session)
         self.refresh_sessions = RefreshSessionRepository(session)
+        self.rbac = OrganizationRBACService(session)
+
     def issue_access_token(self, user, organization) -> str:
-         return create_access_token(
-              user_id=user.id,
-              organization_id=organization.id,
-              )
+        return create_access_token(
+            user_id=user.id,
+            organization_id=organization.id,
+        )
+
     async def register(
         self,
         email: str,
@@ -53,6 +62,10 @@ class AuthService:
             self.session.add(organization)
             await self.session.flush()
 
+            owner_role_id, _ = await self.rbac.provision_default_roles(
+                organization.id
+            )
+
             user = await self.users.create(
                 email=email,
                 password_hash=hash_password(password),
@@ -63,6 +76,7 @@ class AuthService:
                 user_id=user.id,
                 organization_id=organization.id,
                 role="owner",
+                role_id=owner_role_id,
             )
 
             await self.session.commit()
@@ -78,35 +92,36 @@ class AuthService:
             raise
 
     async def login(
-                    self,
-                    email: str,
-                    password: str,
-                    organization_slug: str,
-                    ):
-                user = await self.users.get_by_email(email)
+        self,
+        email: str,
+        password: str,
+        organization_slug: str,
+    ):
+        user = await self.users.get_by_email(email)
 
-                if not user or not user.is_active:
-                    raise ValueError("Invalid email, password, or organization.")
+        if not user or not user.is_active:
+            raise ValueError("Invalid email, password, or organization.")
 
-                if not verify_password(password, user.password_hash):
-                    raise ValueError("Invalid email, password, or organization.")
+        if not verify_password(password, user.password_hash):
+            raise ValueError("Invalid email, password, or organization.")
 
-                organization = await self.organizations.get_by_slug(
-                    organization_slug
-                )
+        organization = await self.organizations.get_by_slug(
+            organization_slug
+        )
 
-                if not organization or organization.status != "active":
-                    raise ValueError("Invalid email, password, or organization.")
+        if not organization or organization.status != "active":
+            raise ValueError("Invalid email, password, or organization.")
 
-                membership = await self.memberships.get_membership(
-                    user.id,
-                    organization.id,
-                )
+        membership = await self.memberships.get_membership(
+            user.id,
+            organization.id,
+        )
 
-                if not membership or membership.status != "active":
-                    raise ValueError("Invalid email, password, or organization.")
+        if not membership or membership.status != "active":
+            raise ValueError("Invalid email, password, or organization.")
 
-                return user, organization, membership
+        return user, organization, membership
+
     async def issue_refresh_token(self, user, organization) -> str:
         settings = get_settings()
         raw_token = generate_refresh_token()
@@ -115,9 +130,8 @@ class AuthService:
             user_id=user.id,
             organization_id=organization.id,
             token_hash=hash_refresh_token(raw_token),
-            expires_at=datetime.now(UTC) + timedelta(
-                days=settings.REFRESH_TOKEN_EXPIRE_DAYS
-            ),
+            expires_at=datetime.now(UTC)
+            + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
         )
 
         return raw_token
@@ -139,10 +153,9 @@ class AuthService:
             raise ValueError("Invalid or expired refresh token.")
 
         return refresh_session
-    
+
     async def rotate_refresh_token(self, raw_token: str):
         old_session = await self.validate_refresh_token(raw_token)
-
         old_session.revoked_at = datetime.now(UTC)
 
         user = await self.users.get_by_id(old_session.user_id)

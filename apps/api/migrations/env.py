@@ -4,16 +4,23 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+from business_orchestrator.agents.models import AgentConfiguration  # noqa: F401
 from business_orchestrator.core.config import get_settings
 from business_orchestrator.database.base import Base
+from business_orchestrator.governance.models import (  # noqa: F401
+    ApprovalPolicy,
+    ApprovalPolicyApprover,
+)
 from business_orchestrator.organizations.membership import OrganizationMembership  # noqa: F401
 from business_orchestrator.organizations.models import Organization  # noqa: F401
+from business_orchestrator.organizations.rbac_models import (  # noqa: F401
+    OrganizationRole,
+    Permission,
+    RolePermission,
+)
 from business_orchestrator.security.models import User  # noqa: F401
 from business_orchestrator.security.refresh_session import RefreshSession  # noqa: F401
 from business_orchestrator.workforce.models import AIEmployee  # noqa: F401
-
-# Import models here as they are created.
-# from business_orchestrator.organizations.models import Organization
 
 config = context.config
 

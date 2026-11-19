@@ -1,3 +1,4 @@
+
 import uuid
 from datetime import datetime
 
@@ -39,6 +40,12 @@ class OrganizationMembership(Base):
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
+    )
+    role_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("organization_roles.id", ondelete="RESTRICT"),
+        nullable=True,
         index=True,
     )
     role: Mapped[str] = mapped_column(

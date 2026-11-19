@@ -17,6 +17,8 @@ async def test_register_creates_user_organization_and_owner_membership():
     user = MagicMock(id=uuid4())
     membership = MagicMock()
     organization_id = uuid4()
+    owner_role_id = uuid4()
+    member_role_id = uuid4()
 
     with (
         patch(
@@ -29,40 +31,51 @@ async def test_register_creates_user_organization_and_owner_membership():
             "business_orchestrator.security.service.MembershipRepository"
         ) as membership_repo,
         patch(
+            "business_orchestrator.security.service.OrganizationRBACService"
+        ) as rbac_service,
+        patch(
             "business_orchestrator.security.service.hash_password",
             return_value="hashed-password",
         ),
+        patch(
+            "business_orchestrator.security.service.Organization"
+        ) as organization_model,
     ):
         user_repo.return_value.get_by_email = AsyncMock(return_value=None)
         user_repo.return_value.create = AsyncMock(return_value=user)
 
         organization = MagicMock(id=organization_id)
+        organization_model.return_value = organization
         org_repo.return_value.get_by_slug = AsyncMock(return_value=None)
 
         membership_repo.return_value.create = AsyncMock(
             return_value=membership
         )
 
+        rbac_service.return_value.provision_default_roles = AsyncMock(
+            return_value=(owner_role_id, member_role_id)
+        )
+
         service = AuthService(session)
 
-        with patch(
-            "business_orchestrator.security.service.Organization",
-            return_value=organization,
-        ):
-            result = await service.register(
-                email="test@example.com",
-                password="StrongPassword123",
-                full_name="Test User",
-                organization_name="Test Company",
-                organization_slug="test-company",
-            )
+        result = await service.register(
+            email="test@example.com",
+            password="StrongPassword123",
+            full_name="Test User",
+            organization_name="Test Company",
+            organization_slug="test-company",
+        )
 
     assert result == (user, organization, membership)
     user_repo.return_value.create.assert_awaited_once()
+    rbac_service.return_value.provision_default_roles.assert_awaited_once_with(
+        organization_id
+    )
     membership_repo.return_value.create.assert_awaited_once_with(
         user_id=user.id,
         organization_id=organization_id,
         role="owner",
+        role_id=owner_role_id,
     )
     session.commit.assert_awaited_once()
 

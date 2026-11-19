@@ -14,6 +14,8 @@ async def test_create_organization_assigns_owner_membership():
     user_id = uuid4()
     organization = MagicMock(id=uuid4())
     membership = MagicMock()
+    owner_role_id = uuid4()
+    member_role_id = uuid4()
 
     with (
         patch(
@@ -22,6 +24,9 @@ async def test_create_organization_assigns_owner_membership():
         patch(
             "business_orchestrator.organizations.service.MembershipRepository"
         ) as membership_repo,
+        patch(
+            "business_orchestrator.organizations.service.OrganizationRBACService"
+        ) as rbac_service,
     ):
         organization_repo.return_value.get_by_slug = AsyncMock(
             return_value=None
@@ -31,6 +36,9 @@ async def test_create_organization_assigns_owner_membership():
         )
         membership_repo.return_value.create = AsyncMock(
             return_value=membership
+        )
+        rbac_service.return_value.provision_default_roles = AsyncMock(
+            return_value=(owner_role_id, member_role_id)
         )
 
         service = OrganizationService(session)
@@ -43,10 +51,14 @@ async def test_create_organization_assigns_owner_membership():
 
     assert result is organization
 
+    rbac_service.return_value.provision_default_roles.assert_awaited_once_with(
+        organization.id
+    )
     membership_repo.return_value.create.assert_awaited_once_with(
         user_id=user_id,
         organization_id=organization.id,
         role="owner",
+        role_id=owner_role_id,
     )
     session.commit.assert_awaited_once()
     session.refresh.assert_awaited_once_with(organization)
@@ -88,6 +100,8 @@ async def test_create_organization_rejects_existing_slug():
 async def test_create_organization_rolls_back_on_integrity_error():
     session = AsyncMock()
     organization = MagicMock(id=uuid4())
+    owner_role_id = uuid4()
+    member_role_id = uuid4()
 
     session.commit.side_effect = IntegrityError(
         "INSERT",
@@ -102,6 +116,9 @@ async def test_create_organization_rolls_back_on_integrity_error():
         patch(
             "business_orchestrator.organizations.service.MembershipRepository"
         ) as membership_repo,
+        patch(
+            "business_orchestrator.organizations.service.OrganizationRBACService"
+        ) as rbac_service,
     ):
         organization_repo.return_value.get_by_slug = AsyncMock(
             return_value=None
@@ -110,6 +127,9 @@ async def test_create_organization_rolls_back_on_integrity_error():
             return_value=organization
         )
         membership_repo.return_value.create = AsyncMock()
+        rbac_service.return_value.provision_default_roles = AsyncMock(
+            return_value=(owner_role_id, member_role_id)
+        )
 
         service = OrganizationService(session)
 
